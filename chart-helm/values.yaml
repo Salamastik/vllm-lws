@@ -6,10 +6,20 @@ image:
   # -- Image repository
   repository: "vllm/vllm-openai"
   # -- Image tag
-  tag: "latest"
+  tag: "0.11.0"
   # -- Container launch command
-  command: ["vllm", "serve", "/data/", "--served-model-name", "opt-125m", "--enforce-eager", "--dtype", "bfloat16", "--block-size", "16", "--host", "0.0.0.0", "--port", "8000"]
+  # command: ["vllm", "serve", "/data/", "--served-model-name", "opt-125m", "--enforce-eager", "--dtype", "bfloat16", "--block-size", "16", "--host", "0.0.0.0", "--port", "8000"]
+multiNode:
+  size: 4
+  gpuPerPod: 4
 
+model:
+  modelFolderName: "GLM-4.5"
+  runCommands:
+    - "--served-model-name GLM-4.5"
+    - "--reasoning-parser glm45"
+    - "--enable-auto-tool-choice"
+    - "--tool-call-parser glm45"
 # -- Container port
 containerPort: 8000
 # -- Service name
@@ -22,9 +32,7 @@ extraPorts: []
 # -- Number of replicas
 replicaCount: 1
 
-# -- Deployment strategy configuration
-deploymentStrategy: {}
-
+pvcStorage: "1000Gi"
 # -- Resource configuration
 resources:
   requests:
@@ -45,99 +53,6 @@ resources:
 # -- Type of gpu used
 gpuModels:
   - "TYPE_GPU_USED"
-
-# -- Autoscaling configuration
-autoscaling:
-  # -- Enable autoscaling
-  enabled: false
-  # -- Minimum replicas
-  minReplicas: 1
-  # -- Maximum replicas
-  maxReplicas: 100
-  # -- Target CPU utilization for autoscaling
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
-
-# -- Configmap
-configs: {}
-
-# -- Secrets configuration
-secrets: {}
-
-# -- External configuration
-externalConfigs: []
-
-# -- Custom Objects configuration
-customObjects: []
-
-# -- Disruption Budget Configuration
-maxUnavailablePodDisruptionBudget: ""
-
-# -- Additional configuration for the init container
-extraInit:
-  # -- Model download functionality (optional)
-  modelDownload:
-    # -- Enable model download job and wait container
-    enabled: true
-    # -- Image configuration for model download operations
-    image:
-      # -- Image repository
-      repository: "amazon/aws-cli"
-      # -- Image tag
-      tag: "2.6.4"
-      # -- Image pull policy
-      pullPolicy: "IfNotPresent"
-    # -- Wait container configuration (init container that waits for model to be ready)
-    waitContainer:
-      # -- Command to execute
-      command: ["/bin/bash"]
-      # -- Arguments for the wait container
-      args:
-        - "-eucx"
-        - "while aws --endpoint-url $S3_ENDPOINT_URL s3 sync --dryrun s3://$S3_BUCKET_NAME/$S3_PATH /data | grep -q download; do sleep 10; done"
-      # -- Environment variables (optional, overrides S3 defaults entirely if specified)
-      # env:
-      #   - name: HUGGING_FACE_HUB_TOKEN
-      #     value: "your-token"
-      #   - name: MODEL_ID
-      #     value: "meta-llama/Llama-2-7b"
-    # -- Download job configuration (job that actually downloads the model)
-    downloadJob:
-      # -- Command to execute
-      command: ["/bin/bash"]
-      # -- Arguments for the download job
-      args:
-        - "-eucx"
-        - "aws --endpoint-url $S3_ENDPOINT_URL s3 sync s3://$S3_BUCKET_NAME/$S3_PATH /data"
-      # -- Environment variables (optional, overrides S3 defaults entirely if specified)
-      # env:
-      #   - name: HUGGING_FACE_HUB_TOKEN
-      #     value: "your-token"
-      #   - name: MODEL_ID
-      #     value: "meta-llama/Llama-2-7b"
-
-  # -- Custom init containers (appended after wait-download-model if modelDownload is enabled)
-  initContainers: []
-  # Example for llm-d sidecar:
-  # initContainers:
-  #   - name: llm-d-routing-proxy
-  #     image: ghcr.io/llm-d/llm-d-routing-sidecar:v0.2.0
-  #     imagePullPolicy: IfNotPresent
-  #     ports:
-  #       - containerPort: 8080
-  #         name: proxy
-  #     securityContext:
-  #       runAsUser: 1000
-
-  # -- Path of the model on the s3 which hosts model weights and config files
-  s3modelpath: "relative_s3_model_path/opt-125m"
-  # -- Storage size for the PVC
-  pvcStorage: "1Gi"
-  # -- Disable AWS EC2 metadata service
-  awsEc2MetadataDisabled: true
-
-# -- Additional containers configuration
-extraContainers: []
 
 # -- Readiness probe configuration
 readinessProbe:

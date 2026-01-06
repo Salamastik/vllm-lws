@@ -1,0 +1,96 @@
+apiVersion: leaderworkerset.x-k8s.io/v1
+kind: LeaderWorkerSet
+metadata:
+  name: vllm
+spec:
+  leaderWorkerTemplate:
+    size: {{ .Values.multiNode.size }}
+    restartPolicy: RecreateGroupOnPodRestart
+    leaderTemplate:
+      metadata:
+        labels:
+          role: leader
+      spec:
+        containers:
+          - name: vllm-leader
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+
+            env:
+              {{- range $.Values.env }}
+              - name: {{ .name }}
+                value: {{ .value}}
+              {{- end }}
+            command:
+              - sh
+              - -c
+              - "bash /vllm-workspace/examples/online_serving/multi-node-serving.sh leader --ray_cluster_size=$(LWS_GROUP_SIZE); 
+                 python3 -m vllm.entrypoints.openai.api_server --port 8080 --model /models/{{ .Values.model.modelFolderName }} {{- range .Values.model.runCommands }} {{ . }} {{- end }} --tensor-parallel-size {{ .Values.multiNode.gpuPerPod }} --pipeline_parallel_size {{ .Values.multiNode.size }}"
+            resources:
+              limits:
+                nvidia.com/gpu: {{ .Values.multiNode.gpuPerPod }}
+                memory: 700Gi
+                cpu: 128
+                ephemeral-storage: 800Gi
+              requests:
+                ephemeral-storage: 800Gi
+                memory: 512Gi
+                cpu: 80
+            ports:
+              - containerPort: 8080
+            readinessProbe:
+              tcpSocket:
+                port: 8080
+              initialDelaySeconds: 15
+              periodSeconds: 10
+            volumeMounts:
+              - mountPath: /dev/shm
+                name: dshm  
+              - name: {{ .Release.Name }}-storage
+                mountPath: /models
+        volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+        - name: {{ .Release.Name }}-storage
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-storage-claim                      
+            volumeMounts:
+              - mountPath: /dev/shm
+                name: dshm
+
+    workerTemplate:
+      spec:
+        containers:
+          - name: vllm-worker
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+            command:
+              - sh
+              - -c
+              - "bash /vllm-workspace/examples/online_serving/multi-node-serving.sh worker --ray_address=$(LWS_LEADER_ADDRESS)"
+            resources:
+              limits:
+                nvidia.com/gpu: {{ .Values.multiNode.gpuPerPod }}
+                memory: 700Gi
+                cpu: 128
+                ephemeral-storage: 800Gi
+              requests:
+                ephemeral-storage: 800Gi
+                memory: 512Gi
+            env:
+              {{- range $.Values.env }}
+              - name: {{ .name }}
+                value: {{ .value}}
+              {{- end }}
+
+            volumeMounts:
+              - mountPath: /dev/shm
+                name: dshm  
+              - name: {{ .Release.Name }}-storage
+                mountPath: /models
+        volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+        - name: {{ .Release.Name }}-storage
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-storage-claim                      
