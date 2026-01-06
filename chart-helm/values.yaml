@@ -1,9 +1,5 @@
-# -- Default values for chart vllm
-# -- Declare variables to be passed into your templates.
 
-# -- Image configuration
 image:
-  # -- Image repository
   repository: "vllm/vllm-openai"
   # -- Image tag
   tag: "0.11.0"
@@ -12,6 +8,7 @@ image:
 multiNode:
   size: 4
   gpuPerPod: 4
+  annotations: {}
 
 model:
   modelFolderName: "GLM-4.5"
@@ -20,13 +17,15 @@ model:
     - "--reasoning-parser glm45"
     - "--enable-auto-tool-choice"
     - "--tool-call-parser glm45"
-# -- Container port
+
+
+env: 
+ - name: EXAMPLE_ENV_VAR
+   value: example_value
+
 containerPort: 8000
-# -- Service name
 serviceName:
-# -- Service port
 servicePort: 80
-# -- Additional ports configuration
 extraPorts: []
 
 # -- Number of replicas
@@ -36,23 +35,12 @@ pvcStorage: "1000Gi"
 # -- Resource configuration
 resources:
   requests:
-    # -- Number of CPUs
-    cpu: 4
-    # -- CPU memory configuration
-    memory: 16Gi
-    # -- Number of gpus used
-    nvidia.com/gpu: 1
+    cpu: 64
+    memory: 128Gi
   limits:
-    # -- Number of CPUs
-    cpu: 4
-    # -- CPU memory configuration
-    memory: 16Gi
-    # -- Number of gpus used
-    nvidia.com/gpu: 1
+    cpu: 128
+    memory: 1512i
 
-# -- Type of gpu used
-gpuModels:
-  - "TYPE_GPU_USED"
 
 # -- Readiness probe configuration
 readinessProbe:

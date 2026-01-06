@@ -10,6 +10,10 @@ spec:
       metadata:
         labels:
           role: leader
+        annotations:
+          {{ with .Values.annotations }}
+          {{ toYaml . | indent 10 }}
+          {{ end }}
       spec:
         containers:
           - name: vllm-leader
@@ -28,13 +32,13 @@ spec:
             resources:
               limits:
                 nvidia.com/gpu: {{ .Values.multiNode.gpuPerPod }}
-                memory: 700Gi
-                cpu: 128
+                memory: {{ .Values.resources.limits.memory }}
+                cpu: {{ .Values.resources.limits.cpu }}
                 ephemeral-storage: 800Gi
               requests:
                 ephemeral-storage: 800Gi
-                memory: 512Gi
-                cpu: 80
+                memory: {{ .Values.resources.requests.memory }}
+                cpu: {{ .Values.resources.requests.cpu }}
             ports:
               - containerPort: 8080
             readinessProbe:
@@ -59,6 +63,11 @@ spec:
                 name: dshm
 
     workerTemplate:
+      metadata:
+        annotations:
+          {{ with .Values.annotations }}
+          {{ toYaml . | indent 10 }}
+          {{ end }}
       spec:
         containers:
           - name: vllm-worker
@@ -70,15 +79,16 @@ spec:
             resources:
               limits:
                 nvidia.com/gpu: {{ .Values.multiNode.gpuPerPod }}
-                memory: 700Gi
-                cpu: 128
+                memory: {{ .Values.resources.limits.memory }}
+                cpu: {{ .Values.resources.limits.cpu }}
                 ephemeral-storage: 800Gi
               requests:
+                memory: {{ .Values.resources.requests.memory }}
+                cpu: {{ .Values.resources.requests.cpu }}
                 ephemeral-storage: 800Gi
-                memory: 512Gi
             env:
               {{- range $.Values.env }}
-              - name: {{ .name }}
+                - name: {{ .name }}
                 value: {{ .value}}
               {{- end }}
 
