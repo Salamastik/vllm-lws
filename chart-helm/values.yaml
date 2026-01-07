@@ -35,6 +35,10 @@ env:
   - name: VLLM_LOGGING_LEVEL
     value: "DEBUG"
 
+securityContext:
+  privilaged: true
+  capabilities:
+    add: ["IPC_LOCK", "CAP_SYS_ADMIN", "SYS_RESOURCE"]
 containerPort: 8080
 servicePort: 80
 extraPorts: []

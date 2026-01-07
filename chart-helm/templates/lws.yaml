@@ -14,45 +14,47 @@ spec:
 
       spec:
         containers:
-          - name: vllm-leader
-            image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        - name: vllm-leader
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
 
-            env:
-              {{- range $.Values.env }}
-              - name: {{ .name }}
-                value: {{ .value}}
-              {{- end }}
-              - name: VLLM_HOST_IP
-                valueFrom:
-                  fieldRef:
-                    fieldPath: status.podIP              
-            command:
-              - sh
-              - -c
-              - "bash /vllm-workspace/examples/online_serving/multi-node-serving.sh leader --ray_cluster_size=$(LWS_GROUP_SIZE); 
-                 python3 -m vllm.entrypoints.openai.api_server --port 8080 --model /models/{{ .Values.model.modelFolderName }} {{- range .Values.model.runCommands }} {{ . }} {{- end }} --tensor-parallel-size {{ .Values.multiNode.gpuPerPod }} --pipeline_parallel_size {{ .Values.multiNode.size }}"
-            resources:
-              limits:
-                nvidia.com/gpu: {{ .Values.multiNode.gpuPerPod }}
-                memory: {{ .Values.resources.limits.memory }}
-                cpu: {{ .Values.resources.limits.cpu }}
-                ephemeral-storage: 800Gi
-              requests:
-                ephemeral-storage: 800Gi
-                memory: {{ .Values.resources.requests.memory }}
-                cpu: {{ .Values.resources.requests.cpu }}
-            ports:
-              - containerPort: 8080
-            readinessProbe:
-              tcpSocket:
-                port: 8080
-              initialDelaySeconds: 15
-              periodSeconds: 10
-            volumeMounts:
-              - mountPath: /dev/shm
-                name: dshm  
-              - name: {{ .Values.Name }}-storage
-                mountPath: /models
+          env:
+          {{- range $.Values.env }}
+          - name: {{ .name }}
+            value: {{ .value}}
+          {{- end }}
+          - name: VLLM_HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP              
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          command:
+            - sh
+            - -c
+            - "bash /vllm-workspace/examples/online_serving/multi-node-serving.sh leader --ray_cluster_size=$(LWS_GROUP_SIZE); 
+                python3 -m vllm.entrypoints.openai.api_server --port 8080 --model /models/{{ .Values.model.modelFolderName }} {{- range .Values.model.runCommands }} {{ . }} {{- end }} --tensor-parallel-size {{ .Values.multiNode.gpuPerPod }} --pipeline_parallel_size {{ .Values.multiNode.size }}"
+          resources:
+            limits:
+              nvidia.com/gpu: {{ .Values.multiNode.gpuPerPod }}
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+              ephemeral-storage: 800Gi
+            requests:
+              ephemeral-storage: 800Gi
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: dshm  
+            - name: {{ .Values.Name }}-storage
+              mountPath: /models
         volumes:
         - name: dshm
           emptyDir:
@@ -86,14 +88,16 @@ spec:
               cpu: {{ .Values.resources.requests.cpu }}
               ephemeral-storage: 800Gi
           env:
-            {{- range $.Values.env }}
-              - name: {{ .name }}
-                value: {{ .value}}
-            {{- end }}
-              - name: VLLM_HOST_IP
-                valueFrom:
-                  fieldRef:
-                    fieldPath: status.podIP
+          {{- range $.Values.env }}
+            - name: {{ .name }}
+              value: {{ .value}}
+          {{- end }}
+            - name: VLLM_HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
           volumeMounts:
             - mountPath: /dev/shm
               name: dshm  
