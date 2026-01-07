@@ -1,14 +1,24 @@
-
+Name: "vllm-lws"
 image:
   repository: "vllm/vllm-openai"
   # -- Image tag
   tag: "0.11.0"
-  # -- Container launch command
-  # command: ["vllm", "serve", "/data/", "--served-model-name", "opt-125m", "--enforce-eager", "--dtype", "bfloat16", "--block-size", "16", "--host", "0.0.0.0", "--port", "8000"]
+
 multiNode:
   size: 4
   gpuPerPod: 4
-  annotations: {}
+  annotations: 
+    k8s.v1.cni.cncf.io/networks: |-
+      [
+        {"name": "ibnetwork1", "namespace": "default"},
+        {"name": "ibnetwork2", "namespace": "default"},
+        {"name": "ibnetwork3", "namespace": "default"}, 
+        {"name": "ibnetwork4", "namespace": "default"},
+        {"name": "ibnetwork5", "namespace": "default"}, 
+        {"name": "ibnetwork6", "namespace": "default"},
+        {"name": "ibnetwork7", "namespace": "default"},
+        {"name": "ibnetwork8", "namespace": "default"}
+      ]
 
 model:
   modelFolderName: "GLM-4.5"
@@ -20,11 +30,12 @@ model:
 
 
 env: 
- - name: EXAMPLE_ENV_VAR
-   value: example_value
+  - name: NCCL_DEBUG
+    value: "TRACE"
+  - name: VLLM_LOGGING_LEVEL
+    value: "DEBUG"
 
-containerPort: 8000
-serviceName:
+containerPort: 8080
 servicePort: 80
 extraPorts: []
 
@@ -39,8 +50,7 @@ resources:
     memory: 128Gi
   limits:
     cpu: 128
-    memory: 1512i
-
+    memory: 1512Gi
 
 # -- Readiness probe configuration
 readinessProbe:
@@ -55,7 +65,7 @@ readinessProbe:
     # -- Path to access on the HTTP server
     path: /health
     # -- Name or number of the port to access on the container, on which the server is listening
-    port: 8000
+    port: 8080
 
 # -- Liveness probe configuration
 livenessProbe:
@@ -70,7 +80,7 @@ livenessProbe:
     # -- Path to access on the HTTP server
     path: /health
     # -- Name or number of the port to access on the container, on which the server is listening
-    port: 8000
+    port: 8080
 
 labels:
   environment: "test"
