@@ -2,11 +2,12 @@ Name: "vllm-lws"
 image:
   repository: "vllm/vllm-openai"
   # -- Image tag
-  tag: "0.11.0"
+  # tag: "0.13.0"
+  tag: "nightly"
 
 multiNode:
-  size: 4
-  gpuPerPod: 4
+  size: 2
+  gpuPerPod: 8
   annotations: 
     k8s.v1.cni.cncf.io/networks: |-
       [
@@ -21,24 +22,31 @@ multiNode:
       ]
 
 model:
-  modelFolderName: "GLM-4.5"
+  modelFolderName: "GLM-4.6"
   runCommands:
-    - "--served-model-name GLM-4.5"
-    - "--reasoning-parser glm45"
+    - "--distributed-executor-backend ray"
+    - "--served-model-name GLM-4.6"
     - "--enable-auto-tool-choice"
+    - "--reasoning_parser glm45"
     - "--tool-call-parser glm45"
+    - "--max-num-seqs 16"
+    - "--gpu-memory-utilization 0.85"
 
 
 env: 
-  - name: NCCL_DEBUG
-    value: "TRACE"
-  - name: VLLM_LOGGING_LEVEL
-    value: "DEBUG"
+  # - name: NCCL_DEBUG
+  #   value: "TRACE"
+  - name: NCCL_IB_DISABLE
+    value: "0"
+  - name: NCCL_IB_RETRY_COUNT
+    value: "13"
+  - name: NCCL_IB_HCA
+    value: '^uverbs* | ^mlx5*'
 
 securityContext:
   privilaged: true
   capabilities:
-    add: ["IPC_LOCK", "CAP_SYS_ADMIN", "SYS_RESOURCE"]
+    add: ["IPC_LOCK", "CAP_SYS_ADMIN", "SYS_RESOURCE", "SYS_ADMIN", "NET_RAW"]
 containerPort: 8080
 servicePort: 80
 extraPorts: []
